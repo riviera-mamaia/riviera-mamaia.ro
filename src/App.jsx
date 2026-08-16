@@ -4,10 +4,8 @@ import {
   ArrowLeft, CreditCard, ShieldCheck, Ticket, Waves,
   Sun, Phone, Check, Loader2, XCircle
 } from "lucide-react";
+import Admin from "./Admin.jsx";
 
-/* ---------------------------------------------------------
-   TOKENS
---------------------------------------------------------- */
 const C = {
   seaDeep: "#0E3A4C",
   seaMid: "#1C6E8C",
@@ -23,28 +21,14 @@ const C = {
 const fontDisplay = { fontFamily: "'Fraunces', serif" };
 const fontMono = { fontFamily: "'Space Mono', monospace" };
 
-/* ---------------------------------------------------------
-   DATA
---------------------------------------------------------- */
-const APARTMENTS = [
-  { id: 1, name: "Vila Steaua Mării", zone: "Mamaia Nord", tag: "Vedere la mare", rooms: 2, guests: 4, beds: 2, size: 62, price: 420, rating: 4.9, reviews: 128, grad: ["#1C6E8C", "#0E3A4C"], amenities: ["wifi", "parcare", "ac", "bucatarie"], desc: "Apartament luminos la etajul 3, cu balcon larg deschis spre promenadă și mare. Bucătărie complet utilată, ideal pentru familii care vor liniște, dar aproape de plajă." },
-  { id: 2, name: "Rezidence Faleza", zone: "Mamaia Centru", tag: "La 2 minute de plajă", rooms: 1, guests: 2, beds: 1, size: 38, price: 310, rating: 4.7, reviews: 94, grad: ["#3E93A8", "#12242B"], amenities: ["wifi", "ac", "bucatarie"], desc: "Studio elegant, recent renovat, perfect pentru cupluri. Faleza și terasele animate sunt chiar la ușă." },
-  { id: 3, name: "Cazino Residence", zone: "Mamaia Centru", tag: "Zonă animată", rooms: 3, guests: 6, beds: 3, size: 84, price: 590, rating: 4.8, reviews: 201, grad: ["#FF6B4A", "#0E3A4C"], amenities: ["wifi", "parcare", "ac", "bucatarie"], desc: "Apartament spațios pe trei camere, potrivit pentru grupuri sau familii extinse. Aproape de cluburile de plajă și restaurante." },
-  { id: 4, name: "Vila Sat Pescăresc", zone: "Mamaia Sat", tag: "Liniște & natură", rooms: 2, guests: 5, beds: 2, size: 58, price: 350, rating: 4.6, reviews: 67, grad: ["#7FC8A9", "#0E3A4C"], amenities: ["wifi", "parcare", "bucatarie"], desc: "Retras de forfotă, cu grădină umbrită și acces facil spre lac și plajă. Bun pentru un sejur relaxat, departe de aglomerație." },
-  { id: 5, name: "Nordis Bay", zone: "Mamaia Nord", tag: "Bloc nou, 2024", rooms: 2, guests: 4, beds: 2, size: 55, price: 480, rating: 4.9, reviews: 53, grad: ["#1C6E8C", "#3E93A8"], amenities: ["wifi", "parcare", "ac", "bucatarie"], desc: "Bloc nou cu piscină exterioară și acces privat pe plajă. Finisaje premium, ideal pentru un sejur de familie fără compromisuri." },
-  { id: 6, name: "Perla Mamaia", zone: "Mamaia Sud", tag: "Raport calitate-preț", rooms: 1, guests: 3, beds: 1, size: 34, price: 260, rating: 4.5, reviews: 142, grad: ["#E8542F", "#12242B"], amenities: ["wifi", "ac"], desc: "Garsonieră practică, curată, la 5 minute de plajă pe jos. Opțiune bună pentru un sejur scurt și accesibil." },
-];
-
 const AMENITY_META = {
   wifi: { icon: Wifi, label: "Wi-Fi" },
   parcare: { icon: Car, label: "Parcare" },
   ac: { icon: Wind, label: "Aer condiționat" },
   bucatarie: { icon: UtensilsCrossed, label: "Bucătărie" },
 };
+const GRADIENTS = [["#1C6E8C", "#0E3A4C"], ["#3E93A8", "#12242B"], ["#FF6B4A", "#0E3A4C"], ["#7FC8A9", "#0E3A4C"], ["#1C6E8C", "#3E93A8"], ["#E8542F", "#12242B"]];
 
-/* ---------------------------------------------------------
-   HELPERS
---------------------------------------------------------- */
 function fmtRON(n) {
   return n.toLocaleString("ro-RO") + " lei";
 }
@@ -52,15 +36,6 @@ function nightsBetween(a, b) {
   if (!a || !b) return 0;
   const diff = Math.round((new Date(b) - new Date(a)) / 86400000);
   return diff > 0 ? diff : 0;
-}
-function WaveDivider({ fill = C.cream }) {
-  return (
-    <div style={{ lineHeight: 0 }}>
-      <svg viewBox="0 0 1440 90" preserveAspectRatio="none" style={{ width: "100%", height: "70px", display: "block" }}>
-        <path d="M0,40 C240,90 480,0 720,30 C960,60 1200,90 1440,40 L1440,90 L0,90 Z" fill={fill} />
-      </svg>
-    </div>
-  );
 }
 function RatingStamp({ rating }) {
   return (
@@ -71,23 +46,35 @@ function RatingStamp({ rating }) {
   );
 }
 
-/* ---------------------------------------------------------
-   LISTING CARD
---------------------------------------------------------- */
+function AptMedia({ apt, height, children }) {
+  const hasImage = apt.image && apt.image.trim().length > 0;
+  const grad = GRADIENTS[apt.id % GRADIENTS.length] || GRADIENTS[0];
+  return (
+    <div style={{ height, position: "relative", overflow: "hidden", background: hasImage ? "#0E3A4C" : `linear-gradient(135deg, ${grad[0]}, ${grad[1]})` }}>
+      {hasImage ? (
+        <img src={apt.image} alt={apt.name} style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0 }} onError={(e) => { e.currentTarget.style.display = "none"; }} />
+      ) : (
+        <div style={{ position: "absolute", inset: 0, opacity: 0.18 }}>
+          <Waves style={{ position: "absolute", bottom: 10, left: 10, width: height * 0.45, height: height * 0.45 }} color={C.cream} />
+          <Sun style={{ position: "absolute", top: 14, right: 18, width: height * 0.22, height: height * 0.22 }} color={C.cream} />
+        </div>
+      )}
+      {hasImage && <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.25))" }} />}
+      {children}
+    </div>
+  );
+}
+
 function ListingCard({ apt, onOpen }) {
   return (
     <button onClick={() => onOpen(apt)} style={{ textAlign: "left", background: "#fff", border: `1px solid ${C.sandDeep}` }}
       className="rounded-2xl overflow-hidden hover:shadow-lg transition-shadow duration-300 focus:outline-none focus-visible:ring-2">
-      <div style={{ height: 190, background: `linear-gradient(135deg, ${apt.grad[0]}, ${apt.grad[1]})`, position: "relative" }}>
-        <div style={{ position: "absolute", inset: 0, opacity: 0.18 }}>
-          <Waves style={{ position: "absolute", bottom: 10, left: 10, width: 90, height: 90 }} color={C.cream} />
-          <Sun style={{ position: "absolute", top: 14, right: 18, width: 44, height: 44 }} color={C.cream} />
-        </div>
+      <AptMedia apt={apt} height={190}>
         <div style={{ position: "absolute", top: 12, left: 12 }}>
           <span style={{ ...fontMono, background: C.coral, color: C.cream }} className="text-xs px-2 py-1 rounded-full">{apt.tag}</span>
         </div>
         <div style={{ position: "absolute", bottom: 12, right: 12 }}><RatingStamp rating={apt.rating} /></div>
-      </div>
+      </AptMedia>
       <div className="p-4">
         <div className="flex items-center gap-1 text-xs mb-1" style={{ color: C.seaMid }}><MapPin size={13} /> {apt.zone}</div>
         <h3 style={{ ...fontDisplay, color: C.ink }} className="text-lg font-semibold leading-snug">{apt.name}</h3>
@@ -105,34 +92,31 @@ function ListingCard({ apt, onOpen }) {
   );
 }
 
-function Header({ onHome }) {
+function Header({ onHome, site }) {
   return (
     <header className="w-full sticky top-0 z-30" style={{ background: C.seaDeep }}>
       <div className="max-w-6xl mx-auto flex items-center justify-between px-5 py-3">
         <button onClick={onHome} className="flex items-center gap-2">
           <Waves color={C.foam} size={22} />
-          <span style={{ ...fontDisplay, color: C.cream }} className="text-lg font-semibold tracking-wide">Litoral<span style={{ color: C.coral }}>Nord</span></span>
+          <span style={{ ...fontDisplay, color: C.cream }} className="text-lg font-semibold tracking-wide">{site.logoPart1}<span style={{ color: C.coral }}>{site.logoPart2}</span></span>
         </button>
-        <div className="hidden sm:flex items-center gap-2 text-xs" style={{ ...fontMono, color: C.sand }}><Phone size={13} /> 0723 000 111</div>
+        <div className="hidden sm:flex items-center gap-2 text-xs" style={{ ...fontMono, color: C.sand }}><Phone size={13} /> {site.phone}</div>
       </div>
     </header>
   );
 }
 
-/* ---------------------------------------------------------
-   HOME
---------------------------------------------------------- */
-function Home({ onOpen }) {
+function Home({ apartments, site, onOpen }) {
   const [zoneFilter, setZoneFilter] = useState("Toate zonele");
-  const zones = ["Toate zonele", ...new Set(APARTMENTS.map(a => a.zone))];
-  const filtered = APARTMENTS.filter(a => zoneFilter === "Toate zonele" || a.zone === zoneFilter);
+  const zones = ["Toate zonele", ...new Set(apartments.map(a => a.zone))];
+  const filtered = apartments.filter(a => zoneFilter === "Toate zonele" || a.zone === zoneFilter);
 
   return (
     <div>
       <section style={{ background: `linear-gradient(180deg, ${C.seaDeep} 0%, ${C.seaMid} 65%, ${C.seaLight} 100%)`, position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", top: 30, right: "8%", width: 120, height: 120, borderRadius: "50%", background: `radial-gradient(circle, ${C.coral} 0%, ${C.coral}00 70%)`, opacity: 0.7 }} />
         <div className="max-w-6xl mx-auto px-5 pt-14 pb-24 relative">
-          <p style={{ ...fontMono, color: C.foam }} className="text-xs tracking-[0.2em] uppercase mb-3">Litoral Nord · Mamaia</p>
+          <p style={{ ...fontMono, color: C.foam }} className="text-xs tracking-[0.2em] uppercase mb-3">{site.logoPart1} {site.logoPart2} · Mamaia</p>
           <h1 style={{ ...fontDisplay, color: C.cream }} className="text-4xl sm:text-5xl font-semibold leading-[1.05] max-w-xl">Vacanța ta la mare, rezervată în câteva minute.</h1>
           <p style={{ color: C.sand }} className="mt-4 max-w-md text-[15px] leading-relaxed">Apartamente verificate în Mamaia, plată online securizată prin Stripe și confirmare instant.</p>
         </div>
@@ -151,9 +135,13 @@ function Home({ onOpen }) {
           <h2 style={{ ...fontDisplay, color: C.ink }} className="text-2xl font-semibold">{filtered.length} cazări disponibile</h2>
           <span className="text-xs" style={{ color: C.seaMid, ...fontMono }}>Prețuri afișate / noapte</span>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filtered.map(apt => <ListingCard key={apt.id} apt={apt} onOpen={onOpen} />)}
-        </div>
+        {filtered.length === 0 ? (
+          <p style={{ color: C.ink, opacity: 0.6 }} className="text-sm">Nu există cazări în această zonă momentan.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filtered.map(apt => <ListingCard key={apt.id} apt={apt} onOpen={onOpen} />)}
+          </div>
+        )}
       </section>
 
       <section style={{ background: C.sand }} className="py-10 mt-6">
@@ -167,25 +155,20 @@ function Home({ onOpen }) {
   );
 }
 
-/* ---------------------------------------------------------
-   DETAIL
---------------------------------------------------------- */
 function Detail({ apt, onBack, onBook }) {
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
-  const [guests, setGuests] = useState(2);
+  const [guests, setGuests] = useState(Math.min(2, apt.guests));
   const nights = nightsBetween(checkIn, checkOut);
   const total = nights * apt.price;
 
   return (
     <div className="max-w-6xl mx-auto px-5 py-8">
       <button onClick={onBack} className="flex items-center gap-2 text-sm mb-5" style={{ color: C.seaMid }}><ArrowLeft size={16} /> Toate cazările</button>
-      <div style={{ height: 280, background: `linear-gradient(135deg, ${apt.grad[0]}, ${apt.grad[1]})`, position: "relative" }} className="rounded-2xl overflow-hidden mb-6">
-        <div style={{ position: "absolute", inset: 0, opacity: 0.2 }}>
-          <Waves style={{ position: "absolute", bottom: -10, left: 20, width: 220, height: 220 }} color={C.cream} />
-          <Sun style={{ position: "absolute", top: 24, right: 40, width: 70, height: 70 }} color={C.cream} />
-        </div>
-        <div style={{ position: "absolute", top: 16, left: 16 }}><span style={{ ...fontMono, background: C.coral, color: C.cream }} className="text-xs px-3 py-1.5 rounded-full">{apt.tag}</span></div>
+      <div className="rounded-2xl overflow-hidden mb-6">
+        <AptMedia apt={apt} height={280}>
+          <div style={{ position: "absolute", top: 16, left: 16 }}><span style={{ ...fontMono, background: C.coral, color: C.cream }} className="text-xs px-3 py-1.5 rounded-full">{apt.tag}</span></div>
+        </AptMedia>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -201,8 +184,8 @@ function Detail({ apt, onBack, onBook }) {
           <p className="mt-5 text-[15px] leading-relaxed" style={{ color: C.ink, opacity: 0.85 }}>{apt.desc}</p>
           <h3 style={{ ...fontDisplay, color: C.ink }} className="text-lg font-semibold mt-7 mb-3">Facilități</h3>
           <div className="grid grid-cols-2 gap-3">
-            {apt.amenities.map(a => {
-              const meta = AMENITY_META[a]; const Icon = meta.icon;
+            {(apt.amenities || []).map(a => {
+              const meta = AMENITY_META[a]; if (!meta) return null; const Icon = meta.icon;
               return <div key={a} className="flex items-center gap-2 text-sm rounded-lg px-3 py-2" style={{ background: C.sand, color: C.ink }}><Icon size={16} color={C.seaDeep} /> {meta.label}</div>;
             })}
           </div>
@@ -238,9 +221,6 @@ function Detail({ apt, onBack, onBook }) {
   );
 }
 
-/* ---------------------------------------------------------
-   CHECKOUT — redirects to real Stripe Checkout
---------------------------------------------------------- */
 function Checkout({ booking, onBack }) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
@@ -261,20 +241,14 @@ function Checkout({ booking, onBack }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          apartmentName: booking.apt.name,
-          zone: booking.apt.zone,
-          checkIn: booking.checkIn,
-          checkOut: booking.checkOut,
-          nights: booking.nights,
-          guests: booking.guests,
-          totalRon: booking.total,
-          guestEmail: email,
-          guestName: name,
+          apartmentName: booking.apt.name, zone: booking.apt.zone, checkIn: booking.checkIn,
+          checkOut: booking.checkOut, nights: booking.nights, guests: booking.guests,
+          totalRon: booking.total, guestEmail: email, guestName: name,
         }),
       });
       const data = await res.json();
       if (!res.ok || !data.url) throw new Error(data.error || "Eroare la inițierea plății.");
-      window.location.href = data.url; // redirect către pagina de plată Stripe
+      window.location.href = data.url;
     } catch (err) {
       setError(err.message);
       setLoading(false);
@@ -285,7 +259,6 @@ function Checkout({ booking, onBack }) {
     <div className="max-w-5xl mx-auto px-5 py-8">
       <button onClick={onBack} className="flex items-center gap-2 text-sm mb-5" style={{ color: C.seaMid }}><ArrowLeft size={16} /> Înapoi la cazare</button>
       <h1 style={{ ...fontDisplay, color: C.ink }} className="text-2xl font-semibold mb-6">Finalizează rezervarea</h1>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
           <div className="rounded-2xl p-5" style={{ background: "#fff", border: `1px solid ${C.sandDeep}` }}>
@@ -295,20 +268,15 @@ function Checkout({ booking, onBack }) {
               <input placeholder="Email (primești biletul aici)" value={email} onChange={e => setEmail(e.target.value)} className="text-sm rounded-lg px-3 py-2.5 border sm:col-span-2" style={{ borderColor: C.sandDeep }} />
             </div>
           </div>
-
           <div className="rounded-2xl p-5 flex items-start gap-3" style={{ background: "#fff", border: `1px solid ${C.sandDeep}` }}>
             <CreditCard size={20} color={C.seaDeep} className="mt-0.5" />
             <div>
               <h3 style={{ ...fontDisplay, color: C.ink }} className="font-semibold">Plată securizată prin Stripe</h3>
-              <p className="text-sm mt-1" style={{ color: C.ink, opacity: 0.7 }}>
-                La pasul următor ești dus pe pagina de plată oficială Stripe, unde introduci datele cardului.
-                Site-ul nostru nu vede și nu stochează niciodată aceste date.
-              </p>
+              <p className="text-sm mt-1" style={{ color: C.ink, opacity: 0.7 }}>La pasul următor ești dus pe pagina de plată oficială Stripe. Site-ul nostru nu vede și nu stochează niciodată datele cardului.</p>
             </div>
           </div>
           {error && <p className="text-xs" style={{ color: C.coralDeep }}>{error}</p>}
         </div>
-
         <div>
           <div className="rounded-2xl p-5 sticky top-20" style={{ background: C.seaDeep, color: C.cream }}>
             <h3 style={{ ...fontDisplay }} className="font-semibold mb-3">{booking.apt.name}</h3>
@@ -329,22 +297,15 @@ function Checkout({ booking, onBack }) {
   );
 }
 
-/* ---------------------------------------------------------
-   CONFIRMATION — verifies real session with the backend
---------------------------------------------------------- */
 function Confirmation({ sessionId, onHome }) {
-  const [state, setState] = useState("loading"); // loading | paid | unpaid | error
+  const [state, setState] = useState("loading");
   const [data, setData] = useState(null);
 
   useEffect(() => {
     if (!sessionId) { setState("error"); return; }
-    fetch(`/api/session-status?session_id=${sessionId}`)
-      .then(r => r.json())
-      .then(d => {
-        if (d.status === "paid") { setData(d); setState("paid"); }
-        else setState("unpaid");
-      })
-      .catch(() => setState("error"));
+    fetch(`/api/session-status?session_id=${sessionId}`).then(r => r.json()).then(d => {
+      if (d.status === "paid") { setData(d); setState("paid"); } else setState("unpaid");
+    }).catch(() => setState("error"));
   }, [sessionId]);
 
   const code = useMemo(() => "MMA-" + sessionId?.slice(-8).toUpperCase(), [sessionId]);
@@ -369,7 +330,6 @@ function Confirmation({ sessionId, onHome }) {
       <div className="w-14 h-14 rounded-full flex items-center justify-center mb-4" style={{ background: C.foam }}><Check color={C.ink} /></div>
       <h1 style={{ ...fontDisplay, color: C.ink }} className="text-2xl font-semibold mb-1">Plată confirmată</h1>
       <p className="text-sm mb-8" style={{ color: C.ink, opacity: 0.7 }}>Biletul tău de rezervare a fost trimis la {data.customer_email}</p>
-
       <div className="w-full rounded-2xl overflow-hidden" style={{ boxShadow: "0 20px 40px rgba(14,58,76,0.2)" }}>
         <div style={{ background: C.seaDeep, color: C.cream }} className="p-6">
           <div className="flex justify-between items-start">
@@ -397,14 +357,16 @@ function Confirmation({ sessionId, onHome }) {
   );
 }
 
-/* ---------------------------------------------------------
-   ROOT
---------------------------------------------------------- */
 export default function App() {
+  const isAdmin = typeof window !== "undefined" && window.location.pathname.startsWith("/admin");
+
   const [view, setView] = useState("home");
   const [activeApt, setActiveApt] = useState(null);
   const [booking, setBooking] = useState(null);
   const [sessionId, setSessionId] = useState(null);
+  const [apartments, setApartments] = useState([]);
+  const [site, setSite] = useState({ logoPart1: "Litoral", logoPart2: "Nord", phone: "" });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const link = document.createElement("link");
@@ -412,30 +374,45 @@ export default function App() {
     link.href = "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap";
     document.head.appendChild(link);
 
-    // Detectează întoarcerea de la Stripe (success / cancel)
-    const params = new URLSearchParams(window.location.search);
-    if (window.location.pathname === "/success" && params.get("session_id")) {
-      setSessionId(params.get("session_id"));
-      setView("confirmation");
-    } else if (window.location.pathname === "/cancel") {
-      setView("home");
+    if (!isAdmin) {
+      const params = new URLSearchParams(window.location.search);
+      if (window.location.pathname === "/success" && params.get("session_id")) {
+        setSessionId(params.get("session_id"));
+        setView("confirmation");
+      } else if (window.location.pathname === "/cancel") {
+        setView("home");
+      }
+      Promise.all([
+        fetch("/api/admin/apartments").then(r => r.json()),
+        fetch("/api/admin/site").then(r => r.json()),
+      ]).then(([aptData, siteData]) => {
+        setApartments(aptData.apartments || []);
+        setSite(siteData.site || site);
+        setLoading(false);
+      }).catch(() => setLoading(false));
     }
     return () => document.head.removeChild(link);
   }, []);
+
+  if (isAdmin) return <Admin />;
 
   function goHome() {
     window.history.replaceState({}, "", "/");
     setView("home"); setBooking(null); setActiveApt(null); setSessionId(null);
   }
 
+  if (loading) {
+    return <div style={{ minHeight: "100vh", background: C.cream, display: "flex", alignItems: "center", justifyContent: "center" }}><Loader2 className="animate-spin" color={C.seaMid} /></div>;
+  }
+
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", background: C.cream, minHeight: "100vh" }}>
-      <Header onHome={goHome} />
-      {view === "home" && <Home onOpen={(apt) => { setActiveApt(apt); setView("detail"); }} />}
+      <Header onHome={goHome} site={site} />
+      {view === "home" && <Home apartments={apartments} site={site} onOpen={(apt) => { setActiveApt(apt); setView("detail"); }} />}
       {view === "detail" && activeApt && <Detail apt={activeApt} onBack={() => setView("home")} onBook={(b) => { setBooking(b); setView("checkout"); }} />}
       {view === "checkout" && booking && <Checkout booking={booking} onBack={() => setView("detail")} />}
       {view === "confirmation" && <Confirmation sessionId={sessionId} onHome={goHome} />}
-      <footer className="text-center text-xs py-8" style={{ color: C.ink, opacity: 0.5 }}>© 2026 LitoralNord · Mamaia, România</footer>
+      <footer className="text-center text-xs py-8" style={{ color: C.ink, opacity: 0.5 }}>© 2026 {site.logoPart1}{site.logoPart2} · Mamaia, România</footer>
     </div>
   );
 }
