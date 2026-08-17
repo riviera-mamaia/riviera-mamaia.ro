@@ -22,7 +22,7 @@ const AMENITY_OPTIONS = [
 
 const EMPTY_APT = {
   name: "", zone: ZONES[0], tag: "", rooms: 1, guests: 2, beds: 1, size: 30,
-  price: 300, rating: 4.8, reviews: 0, image: "", amenities: [], desc: "",
+  price: 300, rating: 4.8, reviews: 0, images: [], amenities: [], desc: "",
 };
 
 function authHeaders(password) {
@@ -38,9 +38,7 @@ function LoginGate({ onSuccess }) {
   async function handleLogin() {
     setLoading(true);
     setError("");
-    const res = await fetch("/api/admin/site").then(() =>
-      fetch("/api/admin/apartments", { method: "PUT", headers: authHeaders(password), body: JSON.stringify({ id: "__ping__" }) })
-    ).catch(() => null);
+    const res = await fetch("/api/admin/apartments", { method: "PUT", headers: authHeaders(password), body: JSON.stringify({ id: "__ping__" }) }).catch(() => null);
     setLoading(false);
     if (!res || res.status === 401) {
       setError("Parolă greșită.");
@@ -82,64 +80,96 @@ function LoginGate({ onSuccess }) {
   );
 }
 
-/* ---------------- IMAGE UPLOAD FIELD ---------------- */
-function ImageUploadField({ value, onChange, password }) {
+/* ---------------- GALLERY UPLOAD FIELD (mai multe poze) ---------------- */
+function GalleryUploadField({ value, onChange, password }) {
   const [uploading, setUploading] = useState(false);
   const inputRef = useRef(null);
+  const images = value || [];
 
-  function handleFile(file) {
-    if (!file) return;
+  function uploadOne(file) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const res = await fetch("/api/admin/upload", {
+            method: "POST",
+            headers: authHeaders(password),
+            body: JSON.stringify({ filename: file.name, dataUrl: reader.result }),
+          });
+          const data = await res.json();
+          resolve(res.ok ? data.url : null);
+        } catch {
+          resolve(null);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleFiles(fileList) {
+    const files = Array.from(fileList || []);
+    if (files.length === 0) return;
     setUploading(true);
-    const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        const res = await fetch("/api/admin/upload", {
-          method: "POST",
-          headers: authHeaders(password),
-          body: JSON.stringify({ filename: file.name, dataUrl: reader.result }),
-        });
-        const data = await res.json();
-        if (res.ok) onChange(data.url);
-      } finally {
-        setUploading(false);
-      }
-    };
-    reader.readAsDataURL(file);
+    const urls = [];
+    for (const file of files) {
+      const url = await uploadOne(file);
+      if (url) urls.push(url);
+    }
+    onChange([...images, ...urls]);
+    setUploading(false);
+  }
+
+  function removeAt(idx) {
+    onChange(images.filter((_, i) => i !== idx));
   }
 
   return (
     <div>
-      <span className="text-xs uppercase mb-1 block" style={{ color: C.seaMid }}>Poză apartament</span>
-      <div className="flex items-center gap-3">
-        {value ? (
-          <img src={value} alt="" style={{ width: 72, height: 56, objectFit: "cover", borderRadius: 8 }} />
-        ) : (
-          <div style={{ width: 72, height: 56, borderRadius: 8, background: C.sand }} />
-        )}
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          disabled={uploading}
-          className="text-xs rounded-lg px-3 py-2 flex items-center gap-1.5"
-          style={{ background: C.sand, color: C.ink }}
-        >
-          {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-          {uploading ? "Se încarcă…" : "Alege poză"}
-        </button>
-        {value && (
-          <button type="button" onClick={() => onChange("")} className="text-xs" style={{ color: C.coralDeep }}>
-            Șterge
-          </button>
-        )}
-      </div>
-      <input ref={inputRef} type="file" accept="image/*" hidden onChange={(e) => handleFile(e.target.files?.[0])} />
+      <span className="text-xs uppercase mb-1 block" style={{ color: C.seaMid }}>
+        Poze apartament {images.length > 0 && `(${images.length})`}
+      </span>
+      {images.length > 0 && (
+        <div className="flex gap-2 flex-wrap mb-2">
+          {images.map((url, idx) => (
+            <div key={idx} style={{ position: "relative" }}>
+              <img src={url} alt="" style={{ width: 72, height: 56, objectFit: "cover", borderRadius: 8 }} />
+              <button
+                type="button"
+                onClick={() => removeAt(idx)}
+                style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", background: C.coralDeep, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                <X size={12} />
+              </button>
+              {idx === 0 && (
+                <span style={{ position: "absolute", bottom: 2, left: 2, background: "rgba(14,58,76,0.85)", color: C.cream, fontSize: 9, padding: "1px 5px", borderRadius: 4 }}>
+                  copertă
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        disabled={uploading}
+        className="text-xs rounded-lg px-3 py-2 flex items-center gap-1.5"
+        style={{ background: C.sand, color: C.ink }}
+      >
+        {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+        {uploading ? "Se încarcă…" : "Adaugă poze"}
+      </button>
+      <p className="text-[10px] mt-1" style={{ color: C.ink, opacity: 0.55 }}>
+        Prima poză devine coperta afișată în listă. Poți alege mai multe deodată.
+      </p>
+      <input ref={inputRef} type="file" accept="image/*" multiple hidden onChange={(e) => handleFiles(e.target.files)} />
     </div>
   );
 }
 
 /* ---------------- APARTMENT FORM ---------------- */
 function AptForm({ initial, onSave, onCancel, password }) {
-  const [apt, setApt] = useState(initial);
+  const [apt, setApt] = useState({ ...initial, images: initial.images || [] });
   const [saving, setSaving] = useState(false);
 
   function set(field, value) {
@@ -216,7 +246,7 @@ function AptForm({ initial, onSave, onCancel, password }) {
           ))}
         </div>
       </div>
-      <ImageUploadField value={apt.image} onChange={(url) => set("image", url)} password={password} />
+      <GalleryUploadField value={apt.images} onChange={(images) => set("images", images)} password={password} />
       <div className="flex gap-2 pt-2">
         <button onClick={handleSave} disabled={saving || !apt.name} className="flex-1 rounded-lg text-sm font-semibold py-2.5 flex items-center justify-center gap-2 disabled:opacity-50" style={{ background: C.coral, color: C.cream }}>
           {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} Salvează
@@ -353,14 +383,14 @@ export default function Admin() {
                   <AptForm key={apt.id} initial={apt} onSave={updateApartment} onCancel={() => setEditingId(null)} password={password} />
                 ) : (
                   <div key={apt.id} className="rounded-2xl p-4 flex items-center gap-3" style={{ background: "#fff", border: `1px solid ${C.sandDeep}` }}>
-                    {apt.image ? (
-                      <img src={apt.image} alt="" style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 8 }} />
+                    {apt.images && apt.images[0] ? (
+                      <img src={apt.images[0]} alt="" style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 8 }} />
                     ) : (
                       <div style={{ width: 56, height: 56, borderRadius: 8, background: C.sand }} />
                     )}
                     <div className="flex-1 min-w-0">
                       <p style={{ color: C.ink }} className="font-medium text-sm truncate">{apt.name}</p>
-                      <p style={{ color: C.seaMid }} className="text-xs">{apt.zone} · {apt.price} lei/noapte</p>
+                      <p style={{ color: C.seaMid }} className="text-xs">{apt.zone} · {apt.price} lei/noapte · {(apt.images || []).length} poze</p>
                     </div>
                     <button onClick={() => setEditingId(apt.id)} className="p-2 rounded-lg" style={{ background: C.sand }}>
                       <Pencil size={14} color={C.ink} />

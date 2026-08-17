@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import {
   MapPin, Users, BedDouble, Star, Wifi, Car, UtensilsCrossed, Wind,
   ArrowLeft, CreditCard, ShieldCheck, Ticket, Waves,
-  Sun, Phone, Check, Loader2, XCircle
+  Sun, Phone, Check, Loader2, XCircle, ChevronLeft, ChevronRight
 } from "lucide-react";
 import Admin from "./Admin.jsx";
 
@@ -46,21 +46,75 @@ function RatingStamp({ rating }) {
   );
 }
 
+/* Fundal static (folosit pe carduri) — prima poză sau gradient */
 function AptMedia({ apt, height, children }) {
-  const hasImage = apt.image && apt.image.trim().length > 0;
+  const cover = apt.images && apt.images[0];
   const grad = GRADIENTS[apt.id % GRADIENTS.length] || GRADIENTS[0];
   return (
-    <div style={{ height, position: "relative", overflow: "hidden", background: hasImage ? "#0E3A4C" : `linear-gradient(135deg, ${grad[0]}, ${grad[1]})` }}>
-      {hasImage ? (
-        <img src={apt.image} alt={apt.name} style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0 }} onError={(e) => { e.currentTarget.style.display = "none"; }} />
+    <div style={{ height, position: "relative", overflow: "hidden", background: cover ? "#0E3A4C" : `linear-gradient(135deg, ${grad[0]}, ${grad[1]})` }}>
+      {cover ? (
+        <img src={cover} alt={apt.name} style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0 }} onError={(e) => { e.currentTarget.style.display = "none"; }} />
       ) : (
         <div style={{ position: "absolute", inset: 0, opacity: 0.18 }}>
           <Waves style={{ position: "absolute", bottom: 10, left: 10, width: height * 0.45, height: height * 0.45 }} color={C.cream} />
           <Sun style={{ position: "absolute", top: 14, right: 18, width: height * 0.22, height: height * 0.22 }} color={C.cream} />
         </div>
       )}
-      {hasImage && <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.25))" }} />}
+      {cover && <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.25))" }} />}
       {children}
+    </div>
+  );
+}
+
+/* Galerie interactivă (folosită pe pagina de detaliu) */
+function AptGallery({ apt, height }) {
+  const [active, setActive] = useState(0);
+  const images = apt.images || [];
+  const grad = GRADIENTS[apt.id % GRADIENTS.length] || GRADIENTS[0];
+  const hasImages = images.length > 0;
+
+  function prev() { setActive((i) => (i - 1 + images.length) % images.length); }
+  function next() { setActive((i) => (i + 1) % images.length); }
+
+  return (
+    <div>
+      <div style={{ height, position: "relative", overflow: "hidden", borderRadius: 16, background: hasImages ? "#0E3A4C" : `linear-gradient(135deg, ${grad[0]}, ${grad[1]})` }}>
+        {hasImages ? (
+          <img src={images[active]} alt={apt.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        ) : (
+          <div style={{ position: "absolute", inset: 0, opacity: 0.18 }}>
+            <Waves style={{ position: "absolute", bottom: -10, left: 20, width: height * 0.75, height: height * 0.75 }} color={C.cream} />
+            <Sun style={{ position: "absolute", top: 24, right: 40, width: height * 0.25, height: height * 0.25 }} color={C.cream} />
+          </div>
+        )}
+        <div style={{ position: "absolute", top: 16, left: 16 }}>
+          <span style={{ ...fontMono, background: C.coral, color: C.cream }} className="text-xs px-3 py-1.5 rounded-full">{apt.tag}</span>
+        </div>
+        {images.length > 1 && (
+          <>
+            <button onClick={prev} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(14,58,76,0.6)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <ChevronLeft color={C.cream} size={18} />
+            </button>
+            <button onClick={next} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(14,58,76,0.6)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <ChevronRight color={C.cream} size={18} />
+            </button>
+            <div style={{ position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)" }} className="flex gap-1.5">
+              {images.map((_, i) => (
+                <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: i === active ? C.cream : "rgba(255,255,255,0.4)" }} />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+      {images.length > 1 && (
+        <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
+          {images.map((url, i) => (
+            <button key={i} onClick={() => setActive(i)} style={{ flexShrink: 0, width: 64, height: 48, borderRadius: 8, overflow: "hidden", border: i === active ? `2px solid ${C.coral}` : `2px solid transparent`, opacity: i === active ? 1 : 0.7 }}>
+              <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -165,10 +219,8 @@ function Detail({ apt, onBack, onBook }) {
   return (
     <div className="max-w-6xl mx-auto px-5 py-8">
       <button onClick={onBack} className="flex items-center gap-2 text-sm mb-5" style={{ color: C.seaMid }}><ArrowLeft size={16} /> Toate cazările</button>
-      <div className="rounded-2xl overflow-hidden mb-6">
-        <AptMedia apt={apt} height={280}>
-          <div style={{ position: "absolute", top: 16, left: 16 }}><span style={{ ...fontMono, background: C.coral, color: C.cream }} className="text-xs px-3 py-1.5 rounded-full">{apt.tag}</span></div>
-        </AptMedia>
+      <div className="mb-6">
+        <AptGallery apt={apt} height={320} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
